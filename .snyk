@@ -1,0 +1,80 @@
+# Example Snyk (https://snyk.io) policy file, patches or ignores known vulnerabilities.
+# Un-comment everything below this line to enable.
+
+# version: v1.19.0
+
+# check https://access.redhat.com/security/cve/CVE-2024-2961 and make sure the patched package is available in
+# https://catalog.redhat.com/software/containers/ubi9/openjdk-17/61ee7c26ed74b2ffb22b07f6
+ignore:
+  SNYK-RHEL9-LESS-6614107:
+    - '*':
+        reason: Ignore until August 1, 2024 - waiting for `registry.access.redhat.com/ubi9/openjdk-17` image update
+        expires: 2024-08-01T00:00:00.000Z
+  SNYK-RHEL9-GITLFS-6600920:
+    - '*':
+        reason: Ignore until August 1, 2024 - waiting for `registry.access.redhat.com/ubi9/openjdk-17` image update
+        expires: 2024-08-01T00:00:00.000Z
+  SNYK-RHEL9-GLIBCMINIMALLANGPACK-6624576:
+    - '*':
+        reason: Not vulnerable
+        expires: 2034-06-01T00:00:00.000Z
+  SNYK-RHEL9-GLIBCHEADERS-6624580:
+    - '*':
+        reason: Not vulnerable
+        expires: 2034-06-01T00:00:00.000Z
+  SNYK-RHEL9-GLIBCCOMMON-6625493:
+    - '*':
+        reason: Not vulnerable
+        expires: 2034-06-01T00:00:00.000Z
+  SNYK-RHEL9-GLIBC-6624544:
+    - '*':
+        reason: Not vulnerable
+        expires: 2034-06-01T00:00:00.000Z
+  SNYK-RHEL9-GLIBCMINIMALLANGPACK-6678441:
+    - '*':
+        reason: Not vulnerable
+        expires: 2034-06-01T00:00:00.000Z
+  SNYK-RHEL9-GLIBCCOMMON-6678689:
+    - '*':
+        reason: Not vulnerable
+        expires: 2034-06-01T00:00:00.000Z
+  SNYK-RHEL9-GLIBC-6678806:
+    - '*':
+        reason: Not vulnerable
+        expires: 2034-06-01T00:00:00.000Z
+  SNYK-RHEL9-GLIBCHEADERS-6678457:
+    - '*':
+        reason: Not vulnerable
+        expires: 2034-06-01T00:00:00.000Z
+  SNYK-RHEL9-PYTHON3LIBS-6675303:
+    - '*':
+        reason: Waiting for a fix
+        expires: 2024-08-01T00:00:00.000Z
+  SNYK-RHEL9-PYTHON3-6675327:
+    - '*':
+        reason: Waiting for a fix
+        expires: 2024-08-01T00:00:00.000Z
+  SNYK-RHEL9-GITCOREDOC-6847509:
+    - '*':
+        reason: Waiting for a fix
+        expires: 2024-08-01T00:00:00.000Z
+  SNYK-RHEL9-GITCOREDOC-6848329:
+    - '*':
+        reason: Waiting for a fix
+        expires: 2024-08-01T00:00:00.000Z
+  SNYK-RHEL9-GITCORE-6847506:
+    - '*':
+        reason: Waiting for a fix
+        expires: 2024-08-01T00:00:00.000Z
+  SNYK-RHEL9-GITCORE-6848296:
+    - '*':
+        reason: Waiting for a fix
+        expires: 2024-08-01T00:00:00.000Z
+  SNYK-RHEL9-GIT-6847483:
+    - '*':
+        reason: Waiting for a fix
+        expires: 2024-08-01T00:00:00.000Z
+  SNYK-RHEL9-GIT-6848339:
+    - '*':
+        reason: Waiting for a fix
+        expires: 2024-08-01T00:00:00.000Z

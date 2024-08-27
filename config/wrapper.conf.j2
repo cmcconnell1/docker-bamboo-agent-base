@@ -1,0 +1,154 @@
+#encoding=UTF-8
+# Configuration files must begin with a line specifying the encoding
+#  of the the file.
+
+#********************************************************************
+# Wrapper License Properties. Don't modify format of line below.
+#********************************************************************
+#include ../conf/wrapper-license.conf
+
+#********************************************************************
+# Wrapper Java Properties
+#********************************************************************
+# Java Application
+wrapper.java.command=java
+
+# Java Main class.
+wrapper.java.mainclass=org.tanukisoftware.wrapper.WrapperSimpleApp
+
+# Java Classpath (include wrapper.jar)
+wrapper.java.classpath.1=../lib/wrapper.jar
+wrapper.java.classpath.2=../lib/bamboo-agent-bootstrap.jar
+
+# Java Library Path (location of Wrapper.DLL or libwrapper.so)
+wrapper.java.library.path.1=../lib
+
+# The Bamboo Agent home configuration file
+wrapper.java.additional.1=-Dbamboo.home={{ bamboo_agent_home }}
+wrapper.java.additional.2=-Dbamboo.agent.ignoreServerCertName={{ ignore_server_cert_name | default('false') }}
+wrapper.java.additional.3=-Dbamboo.allow.empty.artifacts={{ allow_empty_artifacts | default('false') }}
+wrapper.java.additional.4=-DDISABLE_AGENT_AUTO_CAPABILITY_DETECTION={{ disable_agent_auto_capability_detection | default('false') }}
+wrapper.java.additional.5=--add-opens=java.base/java.util=ALL-UNNAMED
+wrapper.java.additional.6=--add-opens=java.base/java.lang=ALL-UNNAMED
+
+{%- set ns = namespace(index=7) %}
+{%- if bamboo_ephemeral_agent_data is not defined %}
+wrapper.java.additional.{{ ns.index }}=-Dbamboo.agent.ephemeral.for.key={{ agent_ephemeral_for_key }}
+{%- set ns.index = ns.index + 1 %}
+{%- else %}
+    {%- for element in bamboo_ephemeral_agent_data.split('#') %}
+        {%- set parts = element.split('=') %}
+        {%- if parts | length > 1 and parts[1] %}
+wrapper.java.additional.{{ ns.index }}=-D{{ parts[0] }}={{ parts[1] }}
+            {%- set ns.index = ns.index + 1 %}
+        {%- elif parts[0] %}
+wrapper.java.additional.{{ ns.index }}=-D{{ parts[0] }}
+            {%- set ns.index = ns.index + 1 %}
+        {%- endif %}
+    {%- endfor %}
+{%- endif %}
+
+{%- if bamboo_wrapper_java_additional_properties is defined %}
+    {%- for element in bamboo_wrapper_java_additional_properties.split('#') %}
+        {%- set parts = element.split('=') %}
+        {%- if parts | length > 1 and parts[1] %}
+wrapper.java.additional.{{ ns.index }}=-D{{ parts[0] }}={{ parts[1] }}
+            {%- set ns.index = ns.index + 1 %}
+        {%- elif parts[0] %}
+wrapper.java.additional.{{ ns.index }}=-D{{ parts[0] }}
+            {%- set ns.index = ns.index + 1 %}
+        {%- endif %}
+    {%- endfor %}
+{%- endif %}
+
+# Application parameters.  Add parameters as needed starting from 1
+wrapper.app.parameter.1=com.atlassian.bamboo.agent.bootstrap.AgentBootstrap
+wrapper.app.parameter.2={{ bamboo_server }}
+wrapper.app.parameter.3={{ security_token }}
+
+# Disable shutdown hook so that
+# wrapper.disable_shutdown_hook=TRUE
+wrapper.on_exit.default=RESTART
+wrapper.on_exit.0=SHUTDOWN
+
+
+# Initial Java Heap Size (in MB)
+wrapper.java.initmemory={{ wrapper_java_initmemory | default(jvm_minimum_memory) | default('256') }}
+
+# Maximum Java Heap Size (in MB)
+wrapper.java.maxmemory={{ wrapper_java_maxmemory | default(jvm_maximum_memory) | default('512') }}
+
+
+#********************************************************************
+# Wrapper Logging Properties
+#********************************************************************
+wrapper.working.dir=.
+
+wrapper.console.format=LPTM
+wrapper.console.loglevel=INFO
+wrapper.console.flush=true
+wrapper.logfile=../atlassian-bamboo-agent.log
+wrapper.logfile.format=LPTM
+wrapper.logfile.loglevel=INFO
+wrapper.logfile.maxsize=10m
+wrapper.logfile.maxfiles=10
+wrapper.syslog.loglevel=INFO
+
+# How long should the wrapper wait before it considers an invocation successful?  3 seconds should be long
+# enough for any configuration errors to have been determined.
+wrapper.successful_invocation_time=3
+
+# Maximum number of times that the Wrapper will attempt to restart the JVM if each attempted invocation exits
+# abnormally or is restarted shortly after having being launched. Must be at least 1. The default value is "5 invocations".
+wrapper.max_failed_invocations=1440
+
+#********************************************************************
+# Wrapper General Properties
+#********************************************************************
+{%- set version = (bamboo_version.split('.')[0] + '.' + bamboo_version.split('.')[1]) | float %}
+{%- set java_min_version = 11 %}
+{%- set java_max_version = 11 %}
+#{%- set fallback_version = java_min_version %}
+#{%- if version >= 9.2 and version < 9.6 %}
+#    {%- set java_min_version = 8 %}
+#    {%- set java_max_version = 11 %}
+#    {%- set fallback_version = java_min_version %}
+#{%- elif version >= 9.6 and version < 10.0 %}
+#    {%- set java_min_version = 11 %}
+#    {%- set java_max_version = 17 %}
+#    {%- set fallback_version = java_min_version %}
+#{%- elif version >= 10.0 %}
+#    {%- set java_min_version = 17 %}
+#    {%- set java_max_version = 17 %}
+#    {%- set fallback_version = java_min_version %}
+#{%- endif %}
+# Title to use when running as a console
+#wrapper.console.title=Bamboo Remote Agent
+wrapper.console.title=Bamboo Remote Agent hardcoded JAVA_VERSION 
+wrapper.java.version.min={{ java_min_version }}
+wrapper.java.version.max={{ java_max_version }}
+wrapper.java.version.fallback={{ fallback_version }}
+wrapper.java.version.output=true
+
+#********************************************************************
+# Wrapper Windows Service Properties
+#********************************************************************
+# WARNING - Do not modify any of these properties when an application
+#  using this configuration file has been installed as a service.
+#  Please uninstall the service before modifying this section.  The
+#  service can then be reinstalled.
+
+# Name of the service
+wrapper.name={{ wrapper_name | default('bamboo-remote-agent') }}
+
+# Display name of the service
+wrapper.displayname=Bamboo Remote Agent
+
+# Description of the service
+wrapper.description=A remote agent for building Bamboo build plans.
+
+# Mode in which the service is installed.  AUTO_START or DEMAND_START
+wrapper.ntservice.starttype=AUTO_START
+
+# Allow the service to interact with the desktop.
+wrapper.ntservice.interactive=FALSE

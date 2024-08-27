@@ -1,0 +1,10 @@
+ignored:
+  - DL3002 # root user in UBI Dockerfile
+  - DL3005 # Package upgrades
+  - DL3006 # Version tagging
+  - DL3008 # Pinning
+  - DL3041 # dnf install latest packages
+  - DL4006 # Pipefail
+  - SC2086 # Quoting
+  - SC2016 # Quoting
+  - SC2086 # Quoting

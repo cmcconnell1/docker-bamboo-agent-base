@@ -1,0 +1,207 @@
+---
+# NOTE: This file is generated from `bitbucket-pipelines.yml.j2` via `pipelines-generator.py`:
+#
+#     python pipelines-generator.py > bitbucket-pipelines.yml
+
+image: docker-public.packages.atlassian.com/atlassian/docker-release-maker:latest
+
+pipelines:
+
+######################################################################
+# The release and master pipelines are currently disabled during
+# development, as there is an internal release plan. The following
+# sections should only be uncommented once that has been deprecated.
+######################################################################
+
+
+  custom:
+    ######################################################################
+    # New Release: Do full release for each image flavour
+    ######################################################################
+    new-releases:
+      - step:
+          name: Check if pipelines config is up-to-date...
+          script:
+            - python3 pipelines-generator.py > bitbucket-pipelines.yml.expected && diff bitbucket-pipelines.yml bitbucket-pipelines.yml.expected
+
+      - parallel:
+{% for (name, pdata) in images.items() %}
+  {% for (jdkver, appdata) in pdata.items() %}
+    {% for offset in range(0, 1) %}
+          - step:
+              name: {{ name }} JDK {{ jdkver }} - Batch {{ offset + 1 }}
+              services:
+                - docker
+              script:
+                - git submodule update --init --recursive
+                - for i in {1..3}; do echo ${DOCKER_BOT_PASSWORD} | docker login ${DOCKER_REGISTRY} --username ${DOCKER_BOT_USERNAME} --password-stdin && break || sleep 5; done; if [ $? -ne 0 ]; then echo "Failed to login to container registry after 3 attempts" && exit 1; fi
+                - docker buildx create --name container --driver docker-container --use
+                - docker buildx ls
+                {% if appdata.snyk_threshold is defined %}
+                - export SEV_THRESHOLD={{ appdata.snyk_threshold }}
+                {% endif %}
+                - >
+                  python /usr/src/app/make-releases.py \
+                    --create --create-eap \
+                    --start-version='{{ appdata.start_version }}' \
+                    {% if appdata.end_version|length %}
+                    --end-version='{{ appdata.end_version }}' \
+                    {% endif %}
+                    {% if appdata.default_release %}
+                    --default-release \
+                    {% endif %}
+                    --dockerfile='{{ appdata.dockerfile }}' \
+                    --dockerfile-buildargs='BASE_IMAGE={{ appdata.base_image }}' \
+                    --dockerfile-version-arg='BAMBOO_VERSION' \
+                    --mac-product-key='{{ appdata.mac_key }}' \
+                    --tag-suffixes='{{ appdata.tag_suffixes|join(',') }}' \
+                    --job-offset='{{ offset }}' \
+                    --jobs-total='1' \
+                    --docker-repos='{{ appdata.docker_repos|join(',') }}' \
+                    --push \
+                    --platforms=linux/amd64,linux/arm64
+
+    {% endfor %}
+  {% endfor %}
+{% endfor %}
+
+    ######################################################################
+    # Custom: Do full release for each image flavour
+    ######################################################################
+    jdk11-custom-release:
+      - variables:
+          - name: BAMBOO_VERSION
+          - name: DOCKER_TAG
+      - step:
+          services:
+            - docker
+          script:
+            - git submodule update --init --recursive
+            - for i in {1..3}; do echo ${DOCKER_BOT_PASSWORD} | docker login ${DOCKER_REGISTRY} --username ${DOCKER_BOT_USERNAME} --password-stdin && break || sleep 5; done; if [ $? -ne 0 ]; then echo "Failed to login to container registry after 3 attempts" && exit 1; fi
+            - >
+              docker build -t ${DOCKER_REGISTRY}/atlassian/bamboo:${DOCKER_TAG}
+                --build-arg BASE_IMAGE=eclipse-temurin:11
+                --build-arg BAMBOO_VERSION=${BAMBOO_VERSION} .
+            - docker push ${DOCKER_REGISTRY}/atlassian/bamboo-agent-base:${DOCKER_TAG}
+
+  branches:
+    ######################################################################
+    # Master branch: Do full release for each image flavour
+    ######################################################################
+    master:
+      - step:
+          name: Check if pipelines config is up-to-date...
+          script:
+            - python3 pipelines-generator.py > bitbucket-pipelines.yml.expected && diff bitbucket-pipelines.yml bitbucket-pipelines.yml.expected
+
+      - parallel:
+{% for (name, pdata) in images.items() %}
+  {% for (jdkver, appdata) in pdata.items() %}
+    {% for offset in range(0, batches) %}
+          - step:
+              name: {{ name }} JDK {{ jdkver }} - Batch {{ offset + 1 }}
+              services:
+                - docker
+              script:
+                - git submodule update --init --recursive
+                - for i in {1..3}; do echo ${DOCKER_BOT_PASSWORD} | docker login ${DOCKER_REGISTRY} --username ${DOCKER_BOT_USERNAME} --password-stdin && break || sleep 5; done; if [ $? -ne 0 ]; then echo "Failed to login to container registry after 3 attempts" && exit 1; fi
+                - docker buildx create --name container --driver docker-container --use
+                - docker buildx ls
+                {% if appdata.snyk_threshold is defined %}
+                - export SEV_THRESHOLD={{ appdata.snyk_threshold }}
+                {% endif %}
+                - >
+                  python /usr/src/app/make-releases.py \
+                    --update \
+                    --start-version='{{ appdata.start_version }}' \
+                    {% if appdata.end_version|length %}
+                    --end-version='{{ appdata.end_version }}' \
+                    {% endif %}
+                    {% if appdata.default_release %}
+                    --default-release \
+                    {% endif %}
+                    --dockerfile='{{ appdata.dockerfile }}' \
+                    --dockerfile-buildargs='BASE_IMAGE={{ appdata.base_image }}' \
+                    --dockerfile-version-arg='BAMBOO_VERSION' \
+                    --mac-product-key='{{ appdata.mac_key }}' \
+                    --tag-suffixes='{{ appdata.tag_suffixes|join(',') }}' \
+                    --job-offset='{{ offset }}' \
+                    --jobs-total='{{ batches }}' \
+                    --docker-repos='{{ appdata.docker_repos|join(',') }}' \
+                    --push \
+                    --platforms=linux/amd64,linux/arm64
+
+    {% endfor %}
+  {% endfor %}
+{% endfor %}
+
+    ######################################################################
+    # All other branches & PRs; run unit tests & functional tests
+    # against latest app version
+    ######################################################################
+    '**':
+      - step:
+          name: Check if pipelines config is up-to-date...
+          script:
+            - python3 pipelines-generator.py > bitbucket-pipelines.yml.expected && diff bitbucket-pipelines.yml bitbucket-pipelines.yml.expected
+
+      - parallel:
+        - step:
+            name: Unit tests
+            image: python:3.7-alpine3.9
+            services:
+              - docker
+            script:
+              - apk add --no-cache git
+              - git submodule update --init --recursive
+              - pip install -q -r shared-components/tests/requirements.txt
+              - export PYTHONPATH=./shared-components/tests:$PYTHONPATH
+              - export DOCKERFILE='Dockerfile'
+              - export DOCKERFILE_VERSION_ARG='BAMBOO_VERSION'
+              - export MAC_PRODUCT_KEY='bamboo'
+              - py.test -v -s tests/
+        - step:
+            name: Functional tests
+            services:
+              - docker
+            script:
+              - apk add --no-cache git docker-compose jq curl
+              - git submodule update --init --recursive
+              - export BAMBOO_VERSION=$(curl -s https://marketplace.atlassian.com/rest/2/products/key/bamboo/versions | jq -r '._embedded.versions | .[0].name')
+              - docker build --build-arg BAMBOO_VERSION=${BAMBOO_VERSION} -t test-image .
+              - export IS_RELEASE=false
+              - /usr/src/app/post_build.sh test-image $IS_RELEASE
+        - step:
+            name: Unit tests - UBI
+            image: python:3.7-alpine3.9
+            services:
+              - docker
+            script:
+              - apk add --no-cache git
+              - git submodule update --init --recursive
+              - pip install -q -r shared-components/tests/requirements.txt
+              - export PYTHONPATH=./shared-components/tests:$PYTHONPATH
+              - export DOCKERFILE='Dockerfile.ubi'
+              - export DOCKERFILE_VERSION_ARG='BAMBOO_VERSION'
+              - export MAC_PRODUCT_KEY='bamboo'
+              - py.test -v -s tests/
+        - step:
+            name: Functional tests - UBI 
+            services:
+              - docker
+            script:
+              - apk add --no-cache git docker-compose jq curl
+              - git submodule update --init --recursive
+              - export BAMBOO_VERSION=$(curl -s https://marketplace.atlassian.com/rest/2/products/key/bamboo/versions | jq -r '._embedded.versions | .[0].name')
+              - docker build --build-arg BAMBOO_VERSION=${BAMBOO_VERSION} -t test-image . -f Dockerfile.ubi
+              - export IS_RELEASE=false
+              - export SEV_THRESHOLD=critical
+              - /usr/src/app/post_build.sh test-image $IS_RELEASE
+definitions:
+  services:
+    docker:
+      memory: 3072
+
+options:
+  size: 1x
+  max-time: 120

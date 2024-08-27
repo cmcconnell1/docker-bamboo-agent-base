@@ -1,0 +1,11 @@
+*~
+*.bak
+*.retry
+__pycache__
+*.pyc
+/.venv
+\#*\#
+.idea
+.vscode
+Pipfile
+Pipfile.lock
