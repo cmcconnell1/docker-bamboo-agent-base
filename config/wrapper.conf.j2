@@ -127,23 +127,16 @@ wrapper.max_failed_invocations=1440
 #wrapper.console.title=Bamboo Remote Agent
 wrapper.console.title=Bamboo Remote Agent hardcoded JAVA_VERSION 
 
-#wrapper.java.version.min={{ java_min_version }}
-#wrapper.java.version.max={{ java_max_version }}
-#wrapper.java.version.fallback={{ fallback_version }}
 wrapper.java.version.output=true
-#
+
 # How to upgrade the Java version used by Bamboo
 # https://confluence.atlassian.com/bamkb/how-to-upgrade-the-java-version-used-by-bamboo-1252329397.html
 wrapper.java.version.min=11
 wrapper.java.version.max=17
 wrapper.java.version.fallback=11
-wrapper.java.additional.4=--add-opens=java.base/
-java.util=ALL-UNNAMED
-wrapper.java.additional.5=--add-opens=java.base/
-java.lang=ALL-UNNAMED
-wrapper.java.additional.6=--add-opens=java.base/
+wrapper.java.additional.8=--add-opens=java.base/
 sun.net.www.protocol.http=ALL-UNNAMED
-wrapper.java.additional.7=--add-opens=java.base/
+wrapper.java.additional.9=--add-opens=java.base/
 sun.net.www.protocol.https=ALL-UNNAMED
 
 #********************************************************************
