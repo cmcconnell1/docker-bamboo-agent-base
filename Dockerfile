@@ -1,7 +1,5 @@
 ARG BASE_IMAGE=eclipse-temurin:17-noble
-#ARG BASE_IMAGE=eclipse-temurin:11
-# The version of Java specified by wrapper.java.command (17.0.12) FATAL | wrapper | 2024/08/23 16:47:46 | is greater than the maximum allowed (11).
-#ARG BASE_IMAGE=eclipse-temurin:17-noble
+#ARG BASE_IMAGE=eclipse-temurin:11-jre-jammy
 FROM $BASE_IMAGE
 
 LABEL maintainer="foo@updateme.com"
@@ -72,12 +70,12 @@ RUN groupadd --gid ${RUN_GID} ${RUN_GROUP} \
         exit 1; \
     fi \
     && mkdir -p ${BAMBOO_AGENT_HOME}/conf ${BAMBOO_AGENT_HOME}/bin \
-    && export TEMP_VERSION=${JAVA_VERSION#*-} && export JAVA_MAJOR_VERSION=${TEMP_VERSION%%.*} \
-    && export TEMP_VERSION=${TEMP_VERSION#*.} && JAVA_MINOR_VERSION=${TEMP_VERSION%%.*} \
+    && JAVA_MAJOR_VERSION=11 \
+    && JAVA_MINOR_VERSION=0 \
     && /bamboo-update-capability.sh "JDK" ${JAVA_HOME}/bin/java \
     && /bamboo-update-capability.sh "system.jdk.JDK ${JAVA_MAJOR_VERSION}" ${JAVA_HOME}/bin/java \
     && /bamboo-update-capability.sh "system.jdk.JDK ${JAVA_MAJOR_VERSION}.${JAVA_MINOR_VERSION}" ${JAVA_HOME}/bin/java \
-    && /bamboo-update-capability.sh "JDK ${JAVA_VERSION}" ${JAVA_HOME}/bin/java \
+    && /bamboo-update-capability.sh "JDK ${JAVA_MAJOR_VERSION}" ${JAVA_HOME}/bin/java \
     && /bamboo-update-capability.sh "Python" /usr/bin/python3 \
     && /bamboo-update-capability.sh "Python 3" /usr/bin/python3 \
     && /bamboo-update-capability.sh "Git" /usr/bin/git \

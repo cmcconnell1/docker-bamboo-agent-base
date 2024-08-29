@@ -11,7 +11,8 @@
 # Wrapper Java Properties
 #********************************************************************
 # Java Application
-wrapper.java.command=java
+#wrapper.java.command=java
+wrapper.java.command=/opt/java/openjdk/bin/java
 
 # Java Main class.
 wrapper.java.mainclass=org.tanukisoftware.wrapper.WrapperSimpleApp
@@ -106,29 +107,44 @@ wrapper.max_failed_invocations=1440
 # Wrapper General Properties
 #********************************************************************
 {%- set version = (bamboo_version.split('.')[0] + '.' + bamboo_version.split('.')[1]) | float %}
-{%- set java_min_version = 11 %}
-{%- set java_max_version = 11 %}
-#{%- set fallback_version = java_min_version %}
-#{%- if version >= 9.2 and version < 9.6 %}
-#    {%- set java_min_version = 8 %}
-#    {%- set java_max_version = 11 %}
-#    {%- set fallback_version = java_min_version %}
-#{%- elif version >= 9.6 and version < 10.0 %}
-#    {%- set java_min_version = 11 %}
-#    {%- set java_max_version = 17 %}
-#    {%- set fallback_version = java_min_version %}
-#{%- elif version >= 10.0 %}
-#    {%- set java_min_version = 17 %}
-#    {%- set java_max_version = 17 %}
-#    {%- set fallback_version = java_min_version %}
-#{%- endif %}
+#{%- set java_min_version = 11 %}
+#{%- set java_max_version = 17 %}
+{%- set fallback_version = java_min_version %}
+{%- if version >= 9.2 and version < 9.6 %}
+    {%- set java_min_version = 8 %}
+    {%- set java_max_version = 11 %}
+    {%- set fallback_version = java_min_version %}
+{%- elif version >= 9.6 and version < 10.0 %}
+    {%- set java_min_version = 11 %}
+    {%- set java_max_version = 17 %}
+    {%- set fallback_version = java_min_version %}
+{%- elif version >= 10.0 %}
+    {%- set java_min_version = 17 %}
+    {%- set java_max_version = 17 %}
+    {%- set fallback_version = java_min_version %}
+{%- endif %}
 # Title to use when running as a console
 #wrapper.console.title=Bamboo Remote Agent
 wrapper.console.title=Bamboo Remote Agent hardcoded JAVA_VERSION 
-wrapper.java.version.min={{ java_min_version }}
-wrapper.java.version.max={{ java_max_version }}
-wrapper.java.version.fallback={{ fallback_version }}
+
+#wrapper.java.version.min={{ java_min_version }}
+#wrapper.java.version.max={{ java_max_version }}
+#wrapper.java.version.fallback={{ fallback_version }}
 wrapper.java.version.output=true
+#
+# How to upgrade the Java version used by Bamboo
+# https://confluence.atlassian.com/bamkb/how-to-upgrade-the-java-version-used-by-bamboo-1252329397.html
+wrapper.java.version.min=11
+wrapper.java.version.max=17
+wrapper.java.version.fallback=11
+wrapper.java.additional.4=--add-opens=java.base/
+java.util=ALL-UNNAMED
+wrapper.java.additional.5=--add-opens=java.base/
+java.lang=ALL-UNNAMED
+wrapper.java.additional.6=--add-opens=java.base/
+sun.net.www.protocol.http=ALL-UNNAMED
+wrapper.java.additional.7=--add-opens=java.base/
+sun.net.www.protocol.https=ALL-UNNAMED
 
 #********************************************************************
 # Wrapper Windows Service Properties
