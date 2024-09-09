@@ -28,6 +28,22 @@ COPY entrypoint.py \
 COPY shared-components/support                      /opt/atlassian/support
 COPY config/*                                       /opt/atlassian/etc/
 
+# DEBUG Copy CA and signing certificates to the Docker image
+COPY certs/ca.crt /usr/local/share/ca-certificates/ca.crt
+COPY certs/agent.crt /etc/ssl/certs/agent.crt
+COPY certs/agent.key /etc/ssl/private/agent.key
+
+# Ensure the certificates have correct permissions
+RUN chmod 644 /etc/ssl/certs/*.crt && chmod 600 /etc/ssl/private/*.key
+
+# Import CA certificate into Java's truststore
+RUN keytool -import -trustcacerts -alias myCA -file /usr/local/share/ca-certificates/ca.crt -keystore $JAVA_HOME/lib/security/cacerts -storepass changeit -noprompt
+# Import the signing certificate into Java's truststore
+RUN keytool -import -trustcacerts -alias myAgentCert -file /etc/ssl/certs/agent.crt -keystore $JAVA_HOME/lib/security/cacerts -storepass changeit -noprompt
+# Set environment variables for Java options
+ENV JAVA_OPTS="-Djavax.net.ssl.trustStore=$JAVA_HOME/lib/security/cacerts -Djavax.net.ssl.trustStorePassword=changeit"
+# END DEBUG
+
 RUN apt-get update \
     && apt-get upgrade -y \
     && apt-get install -y --no-install-recommends \
@@ -70,8 +86,8 @@ RUN groupadd --gid ${RUN_GID} ${RUN_GROUP} \
         exit 1; \
     fi \
     && mkdir -p ${BAMBOO_AGENT_HOME}/conf ${BAMBOO_AGENT_HOME}/bin \
-    && JAVA_MAJOR_VERSION=11 \
-    && JAVA_MINOR_VERSION=0 \
+    && JAVA_MAJOR_VERSION=17 \
+    && JAVA_MINOR_VERSION=12 \
     && /bamboo-update-capability.sh "JDK" ${JAVA_HOME}/bin/java \
     && /bamboo-update-capability.sh "system.jdk.JDK ${JAVA_MAJOR_VERSION}" ${JAVA_HOME}/bin/java \
     && /bamboo-update-capability.sh "system.jdk.JDK ${JAVA_MAJOR_VERSION}.${JAVA_MINOR_VERSION}" ${JAVA_HOME}/bin/java \
@@ -86,6 +102,9 @@ RUN groupadd --gid ${RUN_GID} ${RUN_GROUP} \
         chmod -R "u=rwX,g=rX,o=rX" ${file} && \
         chown -R root ${file}; \
     done
+
+# this doesent work either
+#RUN openssl s_client -connect bamboodev.corp.jeffco.com:443 -showcerts </dev/null 2>/dev/null | sed -e '/-----BEGIN/,/-----END/!d' | tee "/usr/local/share/ca-certificates/ca.crt" >/dev/null && update-ca-certificates
 
 CMD ["/usr/bin/tini", "--", "/entrypoint.py"]
 ENTRYPOINT ["/pre-launch.sh"]

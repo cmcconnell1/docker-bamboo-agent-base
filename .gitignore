@@ -9,3 +9,5 @@ __pycache__
 .vscode
 Pipfile
 Pipfile.lock
+certs/*
+manual-certs/*

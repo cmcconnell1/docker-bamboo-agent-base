@@ -1,0 +1,62 @@
+#!/bin/bash
+
+# CA Key and Certificate:
+# A new Certificate Authority is created (ca.key, ca.crt).
+# Agent Certificate:
+# 
+# A private key and certificate signing request (CSR) are generated for the agent.
+# The agent's certificate is signed by the CA.
+#
+# DigiCert Root Certificate:
+# The root certificate from DigiCert is downloaded (you can replace this part with your own file if needed).
+# PFX Creation:
+# 
+# Finally, the .pfx file is created, containing the agent certificate, CA certificate, and DigiCert root certificate, protected by a password (YourPasswordHere).
+
+# Variables
+AGENT_CRT="agent.crt"
+AGENT_CSR="agent.csr"
+AGENT_KEY="agent.key"
+CA_CRT="ca.crt"
+CA_KEY="ca.key"
+CA_SRL="ca.srl"
+ROOT_CRT="digicert-root.crt"
+PFX_FILE="bamboodev.pfx"
+DAYS_VALID=365
+
+cd certs
+
+# Generate CA key and certificate
+echo "Generating CA key..."
+openssl genrsa -out $CA_KEY 2048
+
+echo "Generating CA certificate..."
+openssl req -x509 -new -nodes -key $CA_KEY -sha256 -days $DAYS_VALID -out $CA_CRT -subj "/C=US/ST=New York/L=Jersey/O=Jefferies/OU=DevOps/CN=bamboodev.corp.jefco.com"
+
+# Generate agent private key
+echo "Generating agent private key..."
+openssl genrsa -out $AGENT_KEY 2048
+
+# Generate agent certificate signing request (CSR)
+echo "Generating agent certificate signing request..."
+openssl req -new -key $AGENT_KEY -out $AGENT_CSR -subj "/C=US/ST=New York/L=Jersey/O=Jefferies/OU=DevOps/CN=bamboodev.corp.jefco.com"
+
+# Sign the agent CSR with CA to create the agent certificate
+echo "Signing agent CSR with CA..."
+openssl x509 -req -in $AGENT_CSR -CA $CA_CRT -CAkey $CA_KEY -CAcreateserial -out $AGENT_CRT -days $DAYS_VALID -sha256
+
+# Include DigiCert root certificate if available
+echo "Downloading DigiCert Root Certificate..."
+wget https://www.digicert.com/CACerts/DigiCertGlobalRootCA.crt -O $ROOT_CRT
+
+# Create the PFX file (including agent cert, CA cert, and DigiCert root)
+echo "Creating .pfx file..."
+openssl pkcs12 -export \
+  -in $AGENT_CRT \
+  -inkey $AGENT_KEY \
+  -certfile <(cat $CA_CRT $ROOT_CRT) \
+  -out $PFX_FILE \
+  -name "agent-certificate" \
+  -passout pass:changeit
+
+echo "completed .pfx file created in ./certs/$PFX_FILE"
