@@ -44,7 +44,7 @@ For advanced usage, e.g. configuration, troubleshooting, supportability, etc.,
 please check the [**Full Documentation**](https://atlassian.github.io/data-center-helm-charts/containers/BAMBOO-AGENT/).
 
 
-# k8s-based builds--Note: bad idea, don't do this 
+# k8s-based builds--Note: this is not recommended
 - insert many security, etc. concerns here...
 ## Skaffold and Kaniko for k8s-based builds
 - If you must do this in k8s, here's how to create the necessary Skaffold and Kaniko configuration files to build a container 
