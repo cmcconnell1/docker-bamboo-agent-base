@@ -1,6 +1,16 @@
 #!/bin/bash -l
 set -x
 
+# Check if the public certificate has already been imported and import to java keystore if not
+# this requires a k8s secret to exist for the public key
+# kubectl -n my-namespace create secret generic publickey --from-file=publickey.pem=/path/to/publickey.pem
+# NOTE: make sure to mount the secret to the container and set the path to the public key file in you pod spec
+# in our case the public cert is a k8s secret and is mounted as a file /etc/ssl/certs/publickey.pem in the ephemeral bamboo agent container
+if [ ! -f /first_run_done ]; then
+    keytool -import -trustcacerts -alias publickey -file /etc/ssl/certs/publickey.pem -keystore $JAVA_HOME/lib/security/cacerts -storepass changeit -noprompt
+    touch /first_run_done
+fi
+ 
 KUBE_NUM_EXTRA_CONTAINERS_OR_ZERO="${KUBE_NUM_EXTRA_CONTAINERS:=0}"
 
 if [ -d "$BAMBOO_AGENT_CLASSPATH_DIR" ]
