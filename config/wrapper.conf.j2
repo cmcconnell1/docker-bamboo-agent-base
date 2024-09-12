@@ -32,6 +32,7 @@ wrapper.java.additional.4=-DDISABLE_AGENT_AUTO_CAPABILITY_DETECTION={{ disable_a
 wrapper.java.additional.5=--add-opens=java.base/java.util=ALL-UNNAMED
 wrapper.java.additional.6=--add-opens=java.base/java.lang=ALL-UNNAMED
 
+
 {%- set ns = namespace(index=7) %}
 {%- if bamboo_ephemeral_agent_data is not defined %}
 wrapper.java.additional.{{ ns.index }}=-Dbamboo.agent.ephemeral.for.key={{ agent_ephemeral_for_key }}
@@ -136,6 +137,20 @@ wrapper.java.version.max=17
 wrapper.java.version.fallback=11
 wrapper.java.additional.8=--add-opens=java.base/sun.net.www.protocol.http=ALL-UNNAMED
 wrapper.java.additional.9=--add-opens=java.base/sun.net.www.protocol.https=ALL-UNNAMED
+
+##### enable for DEBUG JVM Options
+#wrapper.java.additional.1=-verbose:gc
+#wrapper.java.additional.2=-verbose:class
+#wrapper.java.additional.3=-verbose:jni
+## Java Service Wrapper log level
+#wrapper.logfile.loglevel=DEBUG
+## Increase log file size and keep more backups
+#wrapper.logfile.maxsize=100m
+#wrapper.logfile.maxfiles=10
+## Enable detailed Java command line output
+#wrapper.console.loglevel=DEBUG
+##### END DEBUG JVM Options
+
 
 #********************************************************************
 # Wrapper Windows Service Properties

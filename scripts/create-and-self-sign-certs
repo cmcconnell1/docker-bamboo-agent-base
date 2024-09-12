@@ -1,5 +1,7 @@
 #!/bin/bash
 
+# if needed can do this but hopefully not needed
+
 # CA Key and Certificate:
 # A new Certificate Authority is created (ca.key, ca.crt).
 # Agent Certificate:
@@ -21,7 +23,7 @@ CA_CRT="ca.crt"
 CA_KEY="ca.key"
 CA_SRL="ca.srl"
 ROOT_CRT="digicert-root.crt"
-PFX_FILE="bamboodev.pfx"
+PFX_FILE="myserver.pfx"
 DAYS_VALID=365
 
 cd certs
@@ -31,7 +33,7 @@ echo "Generating CA key..."
 openssl genrsa -out $CA_KEY 2048
 
 echo "Generating CA certificate..."
-openssl req -x509 -new -nodes -key $CA_KEY -sha256 -days $DAYS_VALID -out $CA_CRT -subj "/C=US/ST=New York/L=Jersey/O=Jefferies/OU=DevOps/CN=bamboodev.corp.jefco.com"
+openssl req -x509 -new -nodes -key $CA_KEY -sha256 -days $DAYS_VALID -out $CA_CRT -subj "/C=US/ST=myState/L=myCity/O=myCompany/OU=DevOps/CN=myserver.com"
 
 # Generate agent private key
 echo "Generating agent private key..."
@@ -39,7 +41,7 @@ openssl genrsa -out $AGENT_KEY 2048
 
 # Generate agent certificate signing request (CSR)
 echo "Generating agent certificate signing request..."
-openssl req -new -key $AGENT_KEY -out $AGENT_CSR -subj "/C=US/ST=New York/L=Jersey/O=Jefferies/OU=DevOps/CN=bamboodev.corp.jefco.com"
+openssl req -new -key $AGENT_KEY -out $AGENT_CSR -subj "/C=US/ST=MyState/L=City/O=myCompany/OU=myOrg/CN=myserver.com"
 
 # Sign the agent CSR with CA to create the agent certificate
 echo "Signing agent CSR with CA..."
