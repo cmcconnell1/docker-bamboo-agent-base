@@ -1,6 +1,6 @@
 #encoding=UTF-8
 # Configuration files must begin with a line specifying the encoding
-#  of the the file.
+# of the the file.
 
 #********************************************************************
 # Wrapper License Properties. Don't modify format of line below.
@@ -11,7 +11,6 @@
 # Wrapper Java Properties
 #********************************************************************
 # Java Application
-#wrapper.java.command=java
 wrapper.java.command=/opt/java/openjdk/bin/java
 
 # Java Main class.
@@ -31,7 +30,6 @@ wrapper.java.additional.3=-Dbamboo.allow.empty.artifacts={{ allow_empty_artifact
 wrapper.java.additional.4=-DDISABLE_AGENT_AUTO_CAPABILITY_DETECTION={{ disable_agent_auto_capability_detection | default('false') }}
 wrapper.java.additional.5=--add-opens=java.base/java.util=ALL-UNNAMED
 wrapper.java.additional.6=--add-opens=java.base/java.lang=ALL-UNNAMED
-
 
 {%- set ns = namespace(index=7) %}
 {%- if bamboo_ephemeral_agent_data is not defined %}
@@ -73,13 +71,11 @@ wrapper.app.parameter.3={{ security_token }}
 wrapper.on_exit.default=RESTART
 wrapper.on_exit.0=SHUTDOWN
 
-
 # Initial Java Heap Size (in MB)
-wrapper.java.initmemory={{ wrapper_java_initmemory | default(jvm_minimum_memory) | default('1024') }}
+wrapper.java.initmemory={{ wrapper_java_initmemory | default(jvm_minimum_memory) | default('512') }}
 
 # Maximum Java Heap Size (in MB)
-wrapper.java.maxmemory={{ wrapper_java_maxmemory | default(jvm_maximum_memory) | default('2048') }}
-
+wrapper.java.maxmemory={{ wrapper_java_maxmemory | default(jvm_maximum_memory) | default('1048') }}
 
 #********************************************************************
 # Wrapper Logging Properties
@@ -138,7 +134,7 @@ wrapper.java.version.fallback=11
 wrapper.java.additional.8=--add-opens=java.base/sun.net.www.protocol.http=ALL-UNNAMED
 wrapper.java.additional.9=--add-opens=java.base/sun.net.www.protocol.https=ALL-UNNAMED
 
-##### enable for DEBUG JVM Options
+##### START max verbose JVM Options
 #wrapper.java.additional.1=-verbose:gc
 #wrapper.java.additional.2=-verbose:class
 #wrapper.java.additional.3=-verbose:jni
@@ -149,8 +145,7 @@ wrapper.java.additional.9=--add-opens=java.base/sun.net.www.protocol.https=ALL-U
 #wrapper.logfile.maxfiles=10
 ## Enable detailed Java command line output
 #wrapper.console.loglevel=DEBUG
-##### END DEBUG JVM Options
-
+##### END max verbose JVM Options
 
 #********************************************************************
 # Wrapper Windows Service Properties

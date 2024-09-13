@@ -1,180 +1,178 @@
-A Bamboo Agent is a service that can run job builds. Each agent has a defined set of capabilities and can run builds only for jobs whose requirements match the agent's capabilities.
-To learn more about Bamboo, see: https://www.atlassian.com/software/bamboo
+### Developer Onboarding Guide for Docker-Based Applications in Atlassian Bamboo 9.5.2
 
-If you are looking for **Bamboo Server Docker Image** it can be found [here](https://hub.docker.com/r/atlassian/bamboo/).
+### Overview
+- This document provides step-by-step instructions for onboarding application teams Docker-based applications and getting the docker containers built using Atlassian Bamboo with a remote git repository as the build source.  The setup includes using Docker-in-Docker (DinD) for building Docker images.
+- Within Bamboo you will 
+    - configure a Bamboo project
+    - create a build plan, and
+    - set up an ephemeral agent with a custom Docker image--based on [docker-bamboo-agent-base](https://github.com/cmcconnell1/docker-bamboo-agent-base). 
 
-# Overview
+---
 
-This Docker container makes it easy to get a Bamboo Remote Agent up and running. It is intended to be used as a base to build from, and as such
-contains limited built-in capabilities:
+### Table of Contents
+1. **Pre-requisites**
+2. **Overview of Docker in Docker (DinD)**
+3. **Forking the Bamboo Agent Base Docker Image**
+4. **Setting Up Bamboo Project and Plan**
+5. **Configuring Bamboo Ephemeral Agent**
+6. **Building Docker Images with Bamboo**
+7. **Best Agent Configuration for Docker Image Builds**
 
-* JDK 11 (JDK 17 starting from v9.4.0)
-* Git & Git LFS
-* Maven 3
-* Python 3
+---
 
-Using this image as a base, you can create a custom remote agent image with your
-desired build tools installed. Note that Bamboo Agent Docker Image does not
-include a Bamboo server.
+### 1. Pre-requisites
 
-**Use docker version >= 20.10.9.**
+- Access to Atlassian Bamboo (currently targeting version 9.5.2)
+- A git (Bitbucket) repository with a `Dockerfile` for your application
+- A fork of the [docker-bamboo-agent-base](https://github.com/cmcconnell1/docker-bamboo-agent-base) to customize the agent with your required dependencies.
+- Working knowledge of Docker and Bamboo build agents not required but would be very helpful.
 
-# Available Ubuntu base versions
-This image is based on [Eclipse Temurin](https://hub.docker.com/_/eclipse-temurin) and ships with Ubuntu 24.04 (Noble).
-For users requiring the earlier Ubuntu Jammy (22.04) version, the `jdk11-jammy` and `jdk17-jammy` tags are available.
+### 2. Overview of Docker in Docker (DinD)
 
-**Note:** The `-jammy` tags are not maintained and are provided solely for compatibility and migration purposes. 
-It is strongly recommended to use the latest `jdk11` or `jdk17` tags in production environments to ensure you receive the latest updates and security patches.
+**Docker-in-Docker (DinD)** is a method that allows a Docker container to run Docker commands within itself. For your Bamboo build pipeline, DinD is required because:
+- Bamboo agents run inside Docker containers (in Kubernetes or remote environments).
+- The Bamboo agent container needs to run Docker commands to build images.
+- DinD avoids the need to install Docker directly on the host system by creating a clean, isolated environment inside the container.
 
-# Quick Start
+**Why DinD is necessary:**
+- It provides isolation between builds, ensuring each build has its own Docker daemon instance.
+- Reduces conflicts between host and container Docker processes.
+- Ensures that containers can spawn child containers, allowing Bamboo agents to build and push Docker images.
 
-For the `BAMBOO_AGENT_HOME` directory that is used to store the repository data (amongst other things) we recommend mounting a host directory as a [data volume](https://docs.docker.com/engine/tutorials/dockervolumes/#/data-volumes), or via a named volume.
+### 3. Forking the Bamboo Agent Base Docker Image
 
-To get started you can use a data volume, or named volumes. In this example we'll use named volumes.
+1. **Fork the Repository**: Fork the [docker-bamboo-agent-base](https://github.com/cmcconnell1/docker-bamboo-agent-base) to your own Bitbucket or GitHub account.
+2. **Modify the Dockerfile**:
+   - Add any necessary dependencies or tools required for your project.
+   - The dependencies will depend upon the application and frameworks, but could include installing additional CLI tools, package managers, or specific libraries--e.g.: mvn, python, git, etc.
 
-Run an Agent:
+3. **Enable Docker-in-Docker (DinD)**:
+   - In the Dockerfile, ensure that Docker is installed and that the agent runs in DinD mode by setting up the `docker` service within the container.
+   - Example:
+     ```Dockerfile
+     FROM docker:20.10 as base
+     RUN apk add --no-cache bash curl git
+     # Additional dependencies for your project
+     
+     # Set up Docker-in-Docker
+     RUN apk add --no-cache docker openrc
+     ```
 
-    $> docker volume create --name bambooAgentVolume
-    $> docker run -e BAMBOO_SERVER=http://bamboo.mycompany.com/agentServer/ -v bambooAgentVolume:/var/atlassian/application-data/bamboo-agent --name="bambooAgent" --hostname="bambooAgent" -d atlassian/bamboo-agent-base
+4. **Build and Push the Custom Agent**:
+   - Build the Docker image for your custom agent.
+     ```bash
+     docker build -t your-custom-bamboo-agent:latest .
+     ```
+   - Push it to your container registry (e.g., Docker Hub, AWS ECR):
+     ```bash
+     docker push your-registry/your-custom-bamboo-agent:latest
+     ```
 
-**Success**. The Bamboo remote agent is now available to be approved in your Bamboo administration.
+### 4. Setting Up Bamboo Project and Plan
 
-# Advanced Usage
-For advanced usage, e.g. configuration, troubleshooting, supportability, etc.,
-please check the [**Full Documentation**](https://atlassian.github.io/data-center-helm-charts/containers/BAMBOO-AGENT/).
+1. **Create a New Project in Bamboo**:
+   - Navigate to **Create > Create Project** in Bamboo.
+   - Set the project name and key.
 
+2. **Create a Plan**:
+   - Under the newly created project, select **Create Plan**.
+   - Choose a plan name and select the **Bitbucket Repository** where your Docker-based application is stored.
+   - Ensure the `Dockerfile` is in the root of the repository or in a specified directory Bamboo can access.
 
-# k8s-based builds--Note: this is not recommended
-- insert many security, etc. concerns here...
-## Skaffold and Kaniko for k8s-based builds
-- If you must do this in k8s, here's how to create the necessary Skaffold and Kaniko configuration files to build a container 
-- in this case we need to configure and build the `docker-bamboo-agent-base` project.
+3. **Plan Stages and Jobs**:
+   - Add a **Job** to your plan that will execute the Docker build process.
+   - Set up tasks such as:
+     - **Source Code Checkout**: To pull the repository from Bitbucket.
+     - **Docker Build Task**: A custom script task that builds the Docker image.
+     - **Docker Push Task**: Push the image to your container registry.
 
-### 1. **Skaffold Configuration (skaffold.yaml)**
+### 5. Configuring Bamboo Ephemeral Agent
 
-Skaffold is used to manage the lifecycle of container builds and deployments. Below is a basic `skaffold.yaml` configuration that integrates with Kaniko for building the Docker image.
-
-```yaml
-apiVersion: skaffold/v2beta29
-kind: Config
-metadata:
-  name: bamboo-agent-build
-build:
-  artifacts:
-    - image: bamboo-agent-base:latest
-      context: .
-      kaniko:
-        buildContext:
-          # Specify where to store intermediate layers (typically in Google Cloud Storage or S3)
-          gcsBucket: skaffold-kaniko-bucket
-        dockerfilePath: Dockerfile
-        cache: # Optional: to enable caching
-          cacheRepo: <gcr-docker-repo>
-deploy:
-  kubectl:
-    manifests:
-      - k8s/deployment.yaml
-```
-
-### 2. **Kaniko Configuration (Kaniko Docker Build using Kubernetes)**
-
-Kaniko is run inside Kubernetes to build Docker images without Docker-in-Docker (DinD). For this, you’ll need a Kubernetes `Job` definition that runs the Kaniko build process.
-
-Create a `k8s/kaniko-job.yaml` file with the following content:
-
-```yaml
-apiVersion: batch/v1
-kind: Job
-metadata:
-  name: kaniko-build-job
-spec:
-  backoffLimit: 0
-  template:
-    spec:
-      containers:
-        - name: kaniko
-          image: gcr.io/kaniko-project/executor:latest
-          args:
-            - "--context=git://github.com/cmcconnell1/docker-bamboo-agent-base.git#main"
-            - "--dockerfile=Dockerfile"
-            - "--destination=<your-docker-registry>/bamboo-agent-base:latest"
-            - "--cache=true"
-          volumeMounts:
-            - name: kaniko-secret
-              mountPath: /secret
-      restartPolicy: Never
-      volumes:
-        - name: kaniko-secret
-          secret:
-            secretName: regcred
-```
-
-### 3. **Kubernetes Secret for Docker Registry (regcred.yaml)**
-
-You will need to create a Kubernetes secret that contains credentials for your Docker registry. For example:
-
-```bash
-kubectl create secret docker-registry regcred \
-  --docker-server=<your-docker-registry> \
-  --docker-username=<your-username> \
-  --docker-password=<your-password> \
-  --docker-email=<your-email>
-```
-
-Or define it in YAML:
-
+1. **Set Up Ephemeral Kubernetes-Based Agent**:
+   - Ephemeral agents are created and destroyed for each build, ensuring a clean environment.
+   - Configure Bamboo to use your custom Docker agent by adding the agent image in your Kubernetes configuration.
+     - Example YAML:
+       ```yaml
+       apiVersion: v1
+       kind: Pod
+       metadata:
+         name: bamboo-ephemeral-agent
+       spec:
+         containers:
+         - name: bamboo-agent
+           image: your-registry/your-custom-bamboo-agent:latest
+           securityContext:
+             privileged: true  # Required for DinD
+           volumeMounts:
+           - mountPath: /var/run/docker.sock
+             name: docker-socket
+         volumes:
+         - name: docker-socket
+           hostPath:
+             path: /var/run/docker.sock
+       ```
 ```yaml
 apiVersion: v1
-kind: Secret
+kind: Pod
 metadata:
-  name: regcred
-data:
-  .dockerconfigjson: <base64-encoded-docker-config>
-type: kubernetes.io/dockerconfigjson
-```
-
-### 4. **Kubernetes Deployment (deployment.yaml)**
-
-Once the container is built, you can deploy it into your Kubernetes cluster. Create a `k8s/deployment.yaml`:
-
-```yaml
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: bamboo-agent-deployment
+  name: '{{NAME}}'
+  namespace: gis-dev-bamboo
+  labels:
+    '{{RESOURCE_LABEL}}': bamboo-eph
 spec:
-  replicas: 1
-  selector:
-    matchLabels:
-      app: bamboo-agent
-  template:
-    metadata:
-      labels:
-        app: bamboo-agent
-    spec:
-      containers:
-        - name: bamboo-agent
-          image: <your-docker-registry>/bamboo-agent-base:latest
-          ports:
-            - containerPort: 8085
-```
+  containers:
+    - image: cmcc123/docker-bamboo-agent-base:java17
+      name: '{{BAMBOO_AGENT_CONTAINER_NAME}}'
+      imagePullPolicy: Always
+      env:
+        - name: BAMBOO_EPHEMERAL_AGENT_DATA
+          value: '{{BAMBOO_EPHEMERAL_AGENT_DATA_VAL}}'
+      volumeMounts:
+        - name: public-key-volume
+          mountPath: /etc/ssl/certs/publickey.pem
+          subPath: publickey.pem
+  volumes:
+    - name: public-key-volume
+      secret:
+        secretName: bamboo-public-key
+  restartPolicy: Never
+contexts:
+- context:
+    cluster: gis-dev-eks02
+    namespace: gis-dev-bamboo
 
-### Steps:
 
-1. **Install Skaffold**:  
-   Install Skaffold using:
+
+
+
+
+2. **Configure Kubernetes Runner**:
+   - Set up Bamboo to launch the ephemeral agents in your Kubernetes environment. Use the Docker agent you just built and ensure that it has access to the Docker socket for DinD functionality.
+
+### 6. Building Docker Images with Bamboo
+
+1. **Configure Docker Build Command**:
+   In the Bamboo plan, configure a script task that performs the Docker build and push:
    ```bash
-   curl -Lo skaffold https://storage.googleapis.com/skaffold/releases/latest/skaffold-linux-amd64
-   chmod +x skaffold
-   sudo mv skaffold /usr/local/bin
+   docker build -t your-registry/your-app:${bamboo.buildNumber} .
+   docker push your-registry/your-app:${bamboo.buildNumber}
    ```
 
-2. **Run Skaffold**:  
-   After setting up the files, run:
-   ```bash
-   skaffold dev
-   ```
+2. **Handle Docker Permissions**:
+   - Ensure that the Bamboo agent has permissions to build and push Docker images.
+   - Verify access to the Docker socket or configure it via a DinD setup as outlined earlier.
 
-This will build and deploy the `docker-bamboo-agent-base` project in your Kubernetes cluster using Kaniko as the build engine.
+### 7. Best Agent Configuration for Docker Image Builds
 
-Let me know if you need help with further customization!
+**Recommended Approach**: Use a **Kubernetes-based ephemeral agent** running in a container with Docker-in-Docker (DinD) enabled. This is the best approach because:
+- Ephemeral agents offer clean, isolated environments for each build.
+- Kubernetes provides scalability, allowing multiple builds to run in parallel.
+- Docker-in-Docker ensures that the agent container can run Docker commands without conflicting with the host system.
+- This approach avoids the need for persistent agents or manual configuration on hosts.
+
+---
+
+### Conclusion
+
+By following these steps, your team can set up a robust and scalable build pipeline using Atlassian Bamboo 9.5.2 with Docker-based applications. Using Kubernetes-based ephemeral agents running Docker-in-Docker ensures clean, consistent, and efficient builds, while also reducing the complexity of managing agent environments.
+

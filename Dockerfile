@@ -28,21 +28,6 @@ COPY entrypoint.py \
 COPY shared-components/support                      /opt/atlassian/support
 COPY config/*                                       /opt/atlassian/etc/
 
-# Copy CA and signing certificates to the Docker image if needed
-#COPY certs/ca.crt /usr/local/share/ca-certificates/ca.crt
-#COPY certs/agent.crt /etc/ssl/certs/agent.crt
-#COPY certs/agent.key /etc/ssl/private/agent.key
-#
-# Ensure the certificates have correct permissions
-#RUN chmod 644 /etc/ssl/certs/*.crt && chmod 600 /etc/ssl/private/*.key
-#
-# Import CA certificate into Java's truststore
-#RUN keytool -import -trustcacerts -alias myCA -file /usr/local/share/ca-certificates/ca.crt -keystore $JAVA_HOME/lib/security/cacerts -storepass changeit -noprompt
-# Import the signing certificate into Java's truststore
-#RUN keytool -import -trustcacerts -alias myAgentCert -file /etc/ssl/certs/agent.crt -keystore $JAVA_HOME/lib/security/cacerts -storepass changeit -noprompt
-# troubleshooting only
-#RUN openssl s_client -connect bamboodev.corp.jeffco.com:443 -showcerts </dev/null 2>/dev/null | sed -e '/-----BEGIN/,/-----END/!d' | tee "/usr/local/share/ca-certificates/ca.crt" >/dev/null && update-ca-certificates
-
 # Set environment variables for Java options
 ENV JAVA_OPTS="-Djavax.net.ssl.trustStore=$JAVA_HOME/lib/security/cacerts -Djavax.net.ssl.trustStorePassword=changeit"
 
