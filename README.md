@@ -90,8 +90,13 @@
 
 1. **Set Up Ephemeral Kubernetes-Based Agent**:
    - Ephemeral agents are created and destroyed for each build, ensuring a clean environment.
-   - Configure Bamboo to use your custom Docker agent by adding the agent image in your Kubernetes configuration.
-     - Example YAML:
+   - Configure Bamboo to use your custom Docker agent by adding the agent image in your Kubernetes configuration. 
+   - In this example case, we need to have the public key for our bamboo server available as a mountable secret on the bamboo docker container 
+   - E.g.: 
+   ```bash
+   kubectl create secret generic bamboo-public-key --from-file=public.pem=myserver.pem --namespace=bamboo-agents-ns
+   ```
+     - Basic Example YAML:
        ```yaml
        apiVersion: v1
        kind: Pod
@@ -111,36 +116,43 @@
            hostPath:
              path: /var/run/docker.sock
        ```
-```yaml
-apiVersion: v1
-kind: Pod
-metadata:
-  name: '{{NAME}}'
-  namespace: gis-dev-bamboo
-  labels:
-    '{{RESOURCE_LABEL}}': bamboo-eph
-spec:
-  containers:
-    - image: cmcc123/docker-bamboo-agent-base:java17
-      name: '{{BAMBOO_AGENT_CONTAINER_NAME}}'
-      imagePullPolicy: Always
-      env:
-        - name: BAMBOO_EPHEMERAL_AGENT_DATA
-          value: '{{BAMBOO_EPHEMERAL_AGENT_DATA_VAL}}'
-      volumeMounts:
-        - name: public-key-volume
-          mountPath: /etc/ssl/certs/publickey.pem
-          subPath: publickey.pem
-  volumes:
-    - name: public-key-volume
-      secret:
-        secretName: bamboo-public-key
-  restartPolicy: Never
-contexts:
-- context:
-    cluster: gis-dev-eks02
-    namespace: gis-dev-bamboo
-
+     - Full Example YAML:
+        ```yaml
+        apiVersion: v1
+        kind: Pod
+        metadata:
+            name: '{{NAME}}'
+            namespace: gis-dev-bamboo
+            labels:
+                '{{RESOURCE_LABEL}}': bamboo-eph
+        spec:
+            containers:
+                #- image: cmcc123/docker-bamboo-agent-base:java17
+                - image: your-registry/your-custom-bamboo-agent:latest
+                    name: '{{BAMBOO_AGENT_CONTAINER_NAME}}'
+                    securityContext:
+                        privileged: true  # Required for DinD
+                    imagePullPolicy: Always
+                    env:
+                        - name: BAMBOO_EPHEMERAL_AGENT_DATA
+                            value: '{{BAMBOO_EPHEMERAL_AGENT_DATA_VAL}}'
+                    volumeMounts:
+                        - name: public-key-volume
+                            mountPath: /etc/ssl/certs/publickey.pem
+                            subPath: publickey.pem
+            volumes:
+                - name: public-key-volume
+                    secret:
+                        secretName: bamboo-public-key
+                - name: docker-socket
+                    hostPath:
+                        path: /var/run/docker.sock
+            restartPolicy: Never
+        contexts:
+            - context:
+                    cluster: gis-dev-eks02
+                    namespace: gis-dev-bamboo
+        ```
 
 
 
@@ -176,3 +188,13 @@ contexts:
 
 By following these steps, your team can set up a robust and scalable build pipeline using Atlassian Bamboo 9.5.2 with Docker-based applications. Using Kubernetes-based ephemeral agents running Docker-in-Docker ensures clean, consistent, and efficient builds, while also reducing the complexity of managing agent environments.
 
+### Notes 
+- Everything worked fine with the Dockerfil-no-DinD before we needed to have Docker in Docker (DinD)
+we were using the same BASE_IMAGE=eclipse-temurin:17-noble that atlassian was using. 
+
+However...
+The reason to reconsider the base image when using Docker-in-Docker (DinD) is due to the additional complexity and requirements for running Docker inside a container. The eclipse-temurin:17-noble image is primarily a Java runtime environment, optimized for running Java applications. However, for DinD, we also need Docker-specific tools, like the Docker daemon (dockerd), which are not part of the default eclipse-temurin images.
+
+Using a Docker-specific base image or modifying the base image to include the necessary Docker components ensures that the container can manage Docker within itself effectively. You might still be able to use eclipse-temurin by adding the necessary Docker dependencies on top, but it can be simpler and more stable to start with an image designed to handle DinD directly (e.g., docker:dind).
+
+In short, the change of the base image is needed to ensure that the environment is properly configured to handle Docker-in-Docker operations, which are not typically required for basic Java runtime environments like the one provided by eclipse-temurin.

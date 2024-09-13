@@ -1,6 +1,7 @@
-ARG BASE_IMAGE=openjdk:17-jdk-bullseye
+ARG BASE_IMAGE=eclipse-temurin:17-noble
 FROM $BASE_IMAGE
 
+# docker build --platform linux/amd64  --build-arg BAMBOO_VERSION=9.5.2 -t cmcc123/docker-bamboo-agent-base:9.5.2 -t cmcc123/docker-bamboo-agent-base:java17 . ; docker push cmcc123/docker-bamboo-agent-base:java17
 LABEL maintainer="foo@updateme.com"
 LABEL securitytxt="https://www.atlassian.com/.well-known/security.txt"
 
@@ -27,6 +28,7 @@ COPY entrypoint.py \
 COPY shared-components/support                      /opt/atlassian/support
 COPY config/*                                       /opt/atlassian/etc/
 
+# Set environment variables for Java options
 ENV JAVA_OPTS="-Djavax.net.ssl.trustStore=$JAVA_HOME/lib/security/cacerts -Djavax.net.ssl.trustStorePassword=changeit"
 
 RUN apt-get update \
@@ -37,22 +39,7 @@ RUN apt-get update \
          python3 python3-jinja2 python-is-python3 \
          tini \
          maven \
-         apt-transport-https \
-         ca-certificates \
-         curl \
-         gnupg2 \
-         lsb-release \
-    && curl -fsSL https://download.docker.com/linux/debian/gpg | gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg \
-    && echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/debian $(lsb_release -cs) stable" | tee /etc/apt/sources.list.d/docker.list > /dev/null \
-    && apt-get update \
-    && apt-get install -y --no-install-recommends \
-         docker-ce-cli docker-ce containerd.io \
     && apt-get clean autoclean && apt-get autoremove -y && rm -rf /var/lib/apt/lists/*
-
-ENV DOCKER_TLS_CERTDIR=/certs
-VOLUME /var/lib/docker
-VOLUME /certs/client
-ENV DOCKER_DRIVER=overlay2
 
 ARG MAVEN_VERSION=3.6.3
 ENV MAVEN_HOME /opt/maven
@@ -103,9 +90,5 @@ RUN groupadd --gid ${RUN_GID} ${RUN_GROUP} \
         chown -R root ${file}; \
     done
 
-COPY --from=docker:23.0.1-dind /usr/local/bin/dockerd-entrypoint.sh /usr/local/bin/dockerd-entrypoint.sh
-RUN chmod +x /usr/local/bin/dockerd-entrypoint.sh
-
-CMD ["/usr/local/bin/dockerd-entrypoint.sh"]
-
+CMD ["/usr/bin/tini", "--", "/entrypoint.py"]
 ENTRYPOINT ["/pre-launch.sh"]
