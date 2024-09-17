@@ -1,6 +1,7 @@
 ARG BASE_IMAGE=openjdk:17-jdk-bullseye
 FROM $BASE_IMAGE
 
+# docker build --platform linux/amd64  --build-arg BAMBOO_VERSION=9.5.2  -t cmcc123/docker-bamboo-agent-base:dind . ; docker push cmcc123/docker-bamboo-agent-base:dind
 LABEL maintainer="foo@updateme.com"
 LABEL securitytxt="https://www.atlassian.com/.well-known/security.txt"
 
